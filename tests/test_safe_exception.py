@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+import traceback
 from golang_styleship_py.safe_exception import (
     go_style_func,
     go_style_func_async,
@@ -7,6 +8,7 @@ from golang_styleship_py.safe_exception import (
     gst,
     gsta,
     gstdec,
+    ErrorInfo,
 )
 
 
@@ -25,7 +27,10 @@ def test_sync_function_error():
 
     result, error = go_style_func(divide)(1, 0)
     assert result is None
-    assert isinstance(error, ZeroDivisionError)
+    assert isinstance(error, ErrorInfo)
+    assert isinstance(error.exception, ZeroDivisionError)
+    assert isinstance(error.traceback, str)
+    assert "ZeroDivisionError" in error.traceback
 
 
 @pytest.mark.asyncio
@@ -45,7 +50,10 @@ async def test_async_function_error():
 
     result, error = await go_style_func_async(async_divide)(1, 0)
     assert result is None
-    assert isinstance(error, ZeroDivisionError)
+    assert isinstance(error, ErrorInfo)
+    assert isinstance(error.exception, ZeroDivisionError)
+    assert isinstance(error.traceback, str)
+    assert "ZeroDivisionError" in error.traceback
 
 
 def test_decorator_sync():
@@ -136,7 +144,10 @@ class TestMethods:
 
         result, error = Math.divide(1, 0)
         assert result is None
-        assert isinstance(error, ZeroDivisionError)
+        assert isinstance(error, ErrorInfo)
+        assert isinstance(error.exception, ZeroDivisionError)
+        assert isinstance(error.traceback, str)
+        assert "ZeroDivisionError" in error.traceback
 
     def test_divide_function(self):
         def divide(a, b):
@@ -144,7 +155,10 @@ class TestMethods:
 
         result, error = gst(divide)(2, 0)
         assert result is None
-        assert isinstance(error, ZeroDivisionError)
+        assert isinstance(error, ErrorInfo)
+        assert isinstance(error.exception, ZeroDivisionError)
+        assert isinstance(error.traceback, str)
+        assert "ZeroDivisionError" in error.traceback
 
     @pytest.mark.asyncio
     async def test_async_class_method_error(self):
@@ -156,7 +170,10 @@ class TestMethods:
 
         result, error = await AsyncMath.divide(1, 0)
         assert result is None
-        assert isinstance(error, ZeroDivisionError)
+        assert isinstance(error, ErrorInfo)
+        assert isinstance(error.exception, ZeroDivisionError)
+        assert isinstance(error.traceback, str)
+        assert "ZeroDivisionError" in error.traceback
 
     def test_static_method_error(self):
         class Math:
@@ -167,7 +184,10 @@ class TestMethods:
 
         result, error = Math.divide(1, 0)
         assert result is None
-        assert isinstance(error, ZeroDivisionError)
+        assert isinstance(error, ErrorInfo)
+        assert isinstance(error.exception, ZeroDivisionError)
+        assert isinstance(error.traceback, str)
+        assert "ZeroDivisionError" in error.traceback
 
     @pytest.mark.asyncio
     async def test_async_static_method(self):
@@ -193,7 +213,10 @@ class TestMethods:
 
         result, error = await AsyncMath.divide(1, 0)
         assert result is None
-        assert isinstance(error, ZeroDivisionError)
+        assert isinstance(error, ErrorInfo)
+        assert isinstance(error.exception, ZeroDivisionError)
+        assert isinstance(error.traceback, str)
+        assert "ZeroDivisionError" in error.traceback
 
     def test_class_method_with_cls(self):
         class Math:
@@ -261,7 +284,7 @@ def test_nested_go_style_functions():
             return y * 2
 
         result, error = inner(x)
-        return result + 1 if result else None
+        return result + 1 if result is not None else None
 
     result, error = outer(5)
     assert result == 11
@@ -278,7 +301,6 @@ async def test_async_generator():
 
     result, error = async_generator()
     assert error is None
-    print(result)
     assert [item async for item in result] == [0, 1, 2]
 
 
@@ -294,5 +316,31 @@ async def test_concurrent_async_calls():
 
     for i, (result, error) in enumerate(results):
         assert error is None
-        matching_result = i * 2
-        assert result == matching_result
+        assert result == i * 2
+
+
+def test_traceback_content():
+    def raise_exception():
+        raise ValueError("Test exception")
+
+    result, error = go_style_func(raise_exception)()
+    assert result is None
+    assert isinstance(error, ErrorInfo)
+    assert isinstance(error.exception, ValueError)
+    assert isinstance(error.traceback, str)
+    assert "ValueError: Test exception" in error.traceback
+    assert 'raise ValueError("Test exception")' in error.traceback
+
+
+@pytest.mark.asyncio
+async def test_async_traceback_content():
+    async def raise_exception():
+        raise ValueError("Test exception")
+
+    result, error = await go_style_func_async(raise_exception)()
+    assert result is None
+    assert isinstance(error, ErrorInfo)
+    assert isinstance(error.exception, ValueError)
+    assert isinstance(error.traceback, str)
+    assert "ValueError: Test exception" in error.traceback
+    assert 'raise ValueError("Test exception")' in error.traceback
