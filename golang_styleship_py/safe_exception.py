@@ -1,10 +1,9 @@
-from typing import Any, Callable, Coroutine, TypeVar, Union, Awaitable, Tuple
-from dataclasses import dataclass
-import sys
 import asyncio
-import inspect
 import logging
+import sys
 import traceback
+from dataclasses import dataclass
+from typing import Any, Awaitable, Callable, Coroutine, Tuple, TypeVar, Union
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -19,14 +18,17 @@ class ErrorInfo:
 
 
 def wrap_function(
-    func: Union[Callable[..., T], Callable[..., Awaitable[T]]]
+    func: Union[Callable[..., T], Callable[..., Awaitable[T]]],
 ) -> Callable[
     ...,
     Union[
-        Tuple[T | None, ErrorInfo | None], Awaitable[Tuple[T | None, ErrorInfo | None]]
+        Tuple[Union[T, None], Union[ErrorInfo, None]],
+        Awaitable[Tuple[Union[T, None], Union[ErrorInfo, None]]],
     ],
 ]:
-    async def async_wrapper(*args, **kwargs) -> Tuple[T | None, ErrorInfo | None]:
+    async def async_wrapper(
+        *args, **kwargs
+    ) -> Tuple[Union[T, None], Union[ErrorInfo, None]]:
         try:
             result = await func(*args, **kwargs)  # type: ignore
             logger.info(f"Function {func.__name__} executed successfully")
@@ -40,7 +42,7 @@ def wrap_function(
             logger.error(f"Exception in {func.__name__}: {str(e)}\n{tb_str}")
             return None, error_info
 
-    def sync_wrapper(*args, **kwargs) -> Tuple[T | None, ErrorInfo | None]:
+    def sync_wrapper(*args, **kwargs) -> Tuple[Union[T, None], Union[ErrorInfo, None]]:
         try:
             result = func(*args, **kwargs)  # type: ignore
             logger.info(f"Function {func.__name__} executed successfully")
@@ -59,10 +61,12 @@ def wrap_function(
 
 def go_style_func(
     func: Union[Callable[..., T], Callable[..., Awaitable[T]]],
-) -> Callable[..., Tuple[T | None, ErrorInfo | None]]:
+) -> Callable[..., Tuple[Union[T, None], Union[ErrorInfo, None]]]:
     wrapper = wrap_function(func)
 
-    def executor(*args: Any, **kwargs: Any) -> Tuple[T | None, ErrorInfo | None]:
+    def executor(
+        *args: Any, **kwargs: Any
+    ) -> Tuple[Union[T, None], Union[ErrorInfo, None]]:
         if asyncio.iscoroutinefunction(func):
             return asyncio.run(wrapper(*args, **kwargs))  # type: ignore
         return wrapper(*args, **kwargs)  # type: ignore
@@ -74,11 +78,13 @@ gst = go_style_func
 
 
 def go_style_func_async(
-    func: Union[Callable[..., T], Callable[..., Awaitable[T]]]
-) -> Callable[..., Coroutine[Any, Any, Tuple[T | None, ErrorInfo | None]]]:
+    func: Union[Callable[..., T], Callable[..., Awaitable[T]]],
+) -> Callable[..., Coroutine[Any, Any, Tuple[Union[T, None], Union[ErrorInfo, None]]]]:
     wrapper = wrap_function(func)
 
-    async def executor(*args: Any, **kwargs: Any) -> Tuple[T | None, ErrorInfo | None]:
+    async def executor(
+        *args: Any, **kwargs: Any
+    ) -> Tuple[Union[T, None], Union[ErrorInfo, None]]:
         if asyncio.iscoroutinefunction(func):
             return await wrapper(*args, **kwargs)  # type: ignore
 
@@ -88,14 +94,20 @@ def go_style_func_async(
 
 
 def go_style_decorator(
-    func: Union[Callable[..., T], Callable[..., Awaitable[T]]]
+    func: Union[Callable[..., T], Callable[..., Awaitable[T]]],
 ) -> Callable[
     ...,
     Union[
-        Tuple[T | None, ErrorInfo | None], Awaitable[Tuple[T | None, ErrorInfo | None]]
+        Tuple[Union[T, None], Union[ErrorInfo, None]],
+        Awaitable[Tuple[Union[T, None], Union[ErrorInfo, None]]],
     ],
 ]:
     return wrap_function(func)
+
+
+gst = go_style_func
+gsta = go_style_func_async
+gstdec = go_style_decorator
 
 
 gst = go_style_func
