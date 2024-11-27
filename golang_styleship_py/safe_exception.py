@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ErrorInfo:
-    exception: Exception
+    exception: BaseException
     traceback: str
 
 
