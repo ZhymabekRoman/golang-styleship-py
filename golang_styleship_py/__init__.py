@@ -5,6 +5,7 @@ from golang_styleship_py.safe_exception import (
     gst,
     gsta,
     gstdec,
+    ErrorInfo,
 )
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "gst",
     "gsta",
     "gstdec",
+    "ErrorInfo",
 ]
 
 __version__ = "0.1.0"
